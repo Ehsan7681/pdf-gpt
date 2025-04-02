@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>سیستم پرسش و پاسخ اسناد (نسخه آنلاین)</title>
+    <link rel="stylesheet" href="online-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        // تنظیم مسیر کتابخانه PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+<body>
+    <!-- دکمه تغییر تم -->
+    <button class="theme-toggle" id="themeToggle" aria-label="تغییر حالت نمایش">
+        <svg class="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+        </svg>
+        <svg class="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" />
+        </svg>
+    </button>
+
+    <div class="container">
+        <div class="glass-card">
+            <div class="api-key-section">
+                <div class="api-input-container">
+                    <div class="input-label">کلید API</div>
+                    <input type="text" id="apiKeyInput" placeholder="کلید API خود را وارد کنید..." class="api-key-input">
+                    <div class="input-help">
+                        <a href="https://openrouter.ai/keys" target="_blank" class="help-link">برای دریافت کلید API از سایت OpenRouter کلیک کنید</a>
+                    </div>
+                </div>
+                <div class="api-input-container">
+                    <div class="input-label">انتخاب مدل هوش مصنوعی</div>
+                    <select id="modelSelect" class="model-select api-key-input">
+                        <option value="">انتخاب مدل...</option>
+                    </select>
+                </div>
+                <div class="api-input-container">
+                    <div class="input-label">حداکثر توکن پاسخ</div>
+                    <input type="number" id="maxTokensInput" min="100" max="4000" step="100" placeholder="حداکثر توکن..." class="api-key-input" title="تعداد حداکثر توکن برای هر پاسخ (100 تا 4000)">
+                </div>
+                <button id="saveApiKey" class="save-api-button">اعمال</button>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span id="statusText">قطع</span>
+                </div>
+                <button id="toggleConnection" class="toggle-button">اتصال</button>
+            </div>
+            <h1>سیستم پرسش و پاسخ اسناد (نسخه آنلاین)</h1>
+            
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" class="file-input">
+                    <label for="fileInput" class="file-label">
+                        <span>انتخاب فایل PDF یا Word</span>
+                    </label>
+                </div>
+                <div id="fileName" class="file-name"></div>
+            </div>
+
+            <div class="chat-section">
+                <div class="chat-header">
+                    <h3>گفتگو</h3>
+                    <button id="clearChat" class="clear-button">پاک کردن گفتگو</button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-guide" id="chatGuide">
+                        <div class="chat-guide-content">
+                            <div class="chat-guide-icon">💬</div>
+                            <div class="chat-guide-text">فایل مورد نظر خود را بارگذاری کنید و سپس سؤال خود را بپرسید.</div>
+                            <div class="chat-guide-text">می‌توانید درباره محتوای سند سؤال کنید یا درخواست خلاصه‌سازی نمایید.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="new-messages-indicator" id="newMessagesIndicator">پیام‌های جدید ↓</div>
+                <div class="input-section">
+                    <textarea id="userInput" placeholder="سوال خود را بپرسید یا درخواست خلاصه کنید..." class="user-input"></textarea>
+                    <button id="sendButton" class="send-button">ارسال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- دیالوگ تایید برای پاک کردن گفتگو -->
+    <div id="confirmDialog" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">تأیید پاک کردن</h3>
+            </div>
+            <div class="modal-body">
+                آیا از پاک کردن تمام گفتگوها مطمئن هستید؟ این عمل قابل بازگشت نیست.
+            </div>
+            <div class="modal-footer">
+                <button id="cancelClear" class="modal-button cancel">انصراف</button>
+                <button id="confirmClear" class="modal-button confirm">پاک کردن</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نوتیفیکیشن‌های سیستم -->
+    <div id="systemNotification" class="system-notification">
+        <div class="notification-content"></div>
+    </div>
+    
+    <script src="online-script.js"></script>
+</body>
+</html> 
