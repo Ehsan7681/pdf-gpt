@@ -238,8 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // محدود کردن مقدار توکن به محدوده مناسب
         if (tokens < 100) {
             maxTokens = 100;
-        } else if (tokens > 4000) {
-            maxTokens = 4000;
+        } else if (tokens > 8000) {
+            maxTokens = 8000;
         } else {
             maxTokens = tokens;
         }
@@ -1168,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStreamingMessage(responseMessageId, 'در حال پردازش پاسخ...');
             
             const data = await response.json();
-            console.log('پاسخ دریافت شده:', data);
+            console.log('پاسخ دریافت شده از API:', data);
             
             // استخراج متن پاسخ
             let responseText = '';
@@ -1388,6 +1388,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const quizTypeSelect = document.getElementById('quizType');
         const quizDifficultySelect = document.getElementById('quizDifficulty');
         
+        // افزودن محدودیت برای ورودی تعداد سوالات
+        if (questionCountInput) {
+            // گوش دادن به تغییرات در مقدار ورودی
+            questionCountInput.addEventListener('input', function() {
+                // تبدیل ورودی به عدد
+                let value = parseInt(this.value);
+                
+                // اگر عدد وارد شده بزرگتر از 50 باشد، آن را به 50 محدود کنید
+                if (value > 50) {
+                    this.value = 50;
+                    showNotification('حداکثر تعداد سوالات مجاز 50 است.', 'info');
+                }
+            });
+            
+            // همچنین کنترل مقدار هنگام از دست دادن فوکوس
+            questionCountInput.addEventListener('blur', function() {
+                // اگر مقدار خالی باشد، مقدار پیش‌فرض 5 قرار داده می‌شود
+                if (!this.value.trim()) {
+                    this.value = 5;
+                }
+                
+                // اطمینان از محدوده مجاز
+                let value = parseInt(this.value);
+                if (value < 1) {
+                    this.value = 1;
+                } else if (value > 50) {
+                    this.value = 50;
+                }
+            });
+        }
+        
         // کانتینرها
         const quizQuestionsContainer = document.getElementById('quizQuestions');
         const quizLoading = document.getElementById('quizLoading');
@@ -1547,7 +1578,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     // دریافت مقادیر از فرم
                     const prompt = quizPromptInput ? quizPromptInput.value : '';
-                    const questionCount = questionCountInput ? parseInt(questionCountInput.value) || 5 : 5;
+                    let questionCount = questionCountInput ? parseInt(questionCountInput.value) || 5 : 5;
+                    
+                    // محدودیت تعداد سوالات برای جلوگیری از خطا
+                    const MAX_QUESTIONS = 50;
+                    if (questionCount > MAX_QUESTIONS) {
+                        showNotification(`تعداد سوالات بیش از حد مجاز (${MAX_QUESTIONS}) است. تعداد به ${MAX_QUESTIONS} کاهش یافت.`, 'warning');
+                        questionCount = MAX_QUESTIONS;
+                        if (questionCountInput) {
+                            questionCountInput.value = MAX_QUESTIONS;
+                        }
+                    }
+                    
                     const quizType = quizTypeSelect ? quizTypeSelect.value : 'mixed';
                     const quizDifficulty = quizDifficultySelect ? quizDifficultySelect.value : 'mixed';
                     
@@ -1568,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // ذخیره آزمون جدید
                         saveQuizState();
                         
-                        showNotification(`آزمون با ${quiz.questions.length} سوال ایجاد شد.`, 'success');
+                        showNotification(`آزمون با ${quiz.questions.length} سوال ایجاد شد. هر بار "ایجاد آزمون" را بزنید، سوالات متفاوتی دریافت خواهید کرد.`, 'success');
                     } else {
                         showNotification('خطا در ایجاد آزمون: پاسخ دریافتی نامعتبر است.', 'error');
                         activateTab('builder');
@@ -1649,6 +1691,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('ارسال درخواست به OpenRouter...');
                 
                 // ساخت درخواست به OpenRouter
+                const maxTokens = Math.min(8000, Math.max(3000, questionCount * 300)); // حداکثر 8000 توکن
+                
+                // تصادفی‌سازی temperature برای تنوع بیشتر
+                const randomTemp = (Math.random() * 0.3) + 0.6; // بین 0.6 تا 0.9
+                
                 const requestBody = {
                     model: selectedModel,
                     messages: [
@@ -1656,15 +1703,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         { role: 'user', content: userPrompt }
                     ],
                     stream: false,
-                    max_tokens: 3000,  // سوالات آزمون می‌تواند طولانی باشد
-                    temperature: 0.7
+                    max_tokens: maxTokens,  // سوالات آزمون می‌تواند طولانی باشد
+                    temperature: randomTemp
                 };
                 
                 console.log('درخواست API:', requestBody);
                 
                 // ارسال درخواست
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 ثانیه تایم‌اوت
+                const timeoutDuration = Math.max(90000, questionCount * 10000); // افزایش زمان انتظار برای تعداد سوالات بیشتر
+                const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+                
+                console.log(`تایم‌اوت درخواست: ${timeoutDuration/1000} ثانیه`);
                 
                 const response = await fetch(OPENROUTER_API_URL, {
                     method: 'POST',
@@ -1733,11 +1783,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ایجاد پرامپت سیستمی برای هوش مصنوعی
         function createSystemPrompt(questionCount, quizType, quizDifficulty) {
+            // تصادفی‌سازی برای ایجاد تنوع در سوالات
+            const randomSeed = Math.floor(Math.random() * 10000);
+            const diversityPrompts = [
+                "هر بار سوالات کاملاً متفاوتی بسازید.",
+                "از بخش‌های مختلف متن سوال استخراج کنید.",
+                "بر جنبه‌های متفاوت محتوا تمرکز کنید.",
+                "به دنبال مفاهیم خاص و نکات دقیق در متن باشید.",
+                "روی کاربردهای عملی محتوا تمرکز کنید."
+            ];
+            
+            // انتخاب تصادفی یکی از پرامپت‌های تنوع
+            const diversityPrompt = diversityPrompts[Math.floor(Math.random() * diversityPrompts.length)];
+            
             return `شما یک سیستم طراحی آزمون هستید. وظیفه شما ایجاد آزمون از محتوای متنی است که کاربر ارائه می‌دهد.
              
             لطفاً آزمونی با ${questionCount} سوال از محتوای داده شده ایجاد کنید.
             نوع سوالات: ${getQuizTypeDescription(quizType)}
             سطح دشواری: ${getQuizDifficultyDescription(quizDifficulty)}
+            
+            # راهنمای ویژه:
+            - ${diversityPrompt}
+            - شناسه تصادفی برای این درخواست: ${randomSeed} (از این برای ایجاد سوالات متفاوت استفاده کنید)
+            - با هر درخواست جدید، سوالات متفاوتی ایجاد کنید، حتی اگر متن یکسان باشد.
             
             پاسخ خود را به صورت JSON با ساختار زیر ارائه دهید:
             {
@@ -1845,7 +1913,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 // اطمینان از صحت ساختار
                 if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
                     console.error('ساختار سوالات ناقص است:', quiz);
-                    throw new Error('ساختار سوالات در پاسخ صحیح نیست');
+                    
+                    // جستجوی فیلد احتمالی سوالات
+                    for (const key in quiz) {
+                        if (Array.isArray(quiz[key]) && quiz[key].length > 0) {
+                            console.log(`فیلد آرایه‌ای یافت شد: ${key} با ${quiz[key].length} آیتم`);
+                            quiz.questions = quiz[key];
+                            break;
+                        }
+                    }
+                    
+                    // اگر هنوز سوالی پیدا نشده
+                    if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+                        throw new Error('ساختار سوالات در پاسخ صحیح نیست');
+                    }
+                }
+                
+                // محدود کردن تعداد سوالات به تعداد درخواستی
+                if (quiz.questions.length > questionCount) {
+                    console.log(`تعداد سوالات بیش از حد درخواستی است. محدود کردن از ${quiz.questions.length} به ${questionCount}`);
+                    quiz.questions = quiz.questions.slice(0, questionCount);
                 }
                 
                 // اصلاح احتمالی ID سوالات
@@ -1903,6 +1990,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             console.log(`نمایش ${quiz.questions.length} سوال`);
+            
+            // اگر تعداد سوالات بیش از 10 است، یک هشدار به کاربر برای اسکرول نمایش دهیم
+            if (quiz.questions.length > 10) {
+                const scrollNotice = document.createElement('div');
+                scrollNotice.className = 'quiz-scroll-notice';
+                scrollNotice.textContent = `این آزمون شامل ${quiz.questions.length} سوال است. برای مشاهده همه سوالات اسکرول کنید.`;
+                quizQuestionsContainer.appendChild(scrollNotice);
+                
+                // ایجاد یک فهرست سوالات برای ناوبری سریع
+                const questionIndexContainer = document.createElement('div');
+                questionIndexContainer.className = 'quiz-index-container';
+                questionIndexContainer.innerHTML = '<div class="quiz-index-title">پرش به سوال:</div>';
+                
+                const questionIndexList = document.createElement('div');
+                questionIndexList.className = 'quiz-index-list';
+                
+                for (let i = 0; i < quiz.questions.length; i++) {
+                    const indexItem = document.createElement('span');
+                    indexItem.className = 'quiz-index-item';
+                    indexItem.textContent = (i + 1).toString();
+                    indexItem.addEventListener('click', () => {
+                        const questionElement = document.querySelector(`.quiz-question[data-id="${quiz.questions[i].id}"]`);
+                        if (questionElement) {
+                            questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
+                    questionIndexList.appendChild(indexItem);
+                }
+                
+                questionIndexContainer.appendChild(questionIndexList);
+                quizQuestionsContainer.appendChild(questionIndexContainer);
+            }
             
             quiz.questions.forEach((question, index) => {
                 try {
@@ -2019,7 +2138,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     correctAnswer,
                     isCorrect,
                     explanation: question.explanation,
-                    type: question.type
+                    type: question.type,
+                    difficulty: question.difficulty || 'medium' // اضافه کردن سطح سختی، اگر تعریف نشده بود متوسط در نظر گرفته شود
                 });
             });
             
@@ -2053,7 +2173,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         // متن سوال
                         const questionText = document.createElement('div');
                         questionText.className = 'result-question';
-                        questionText.textContent = `${index + 1}. ${question.text}`;
+                        
+                        // اضافه کردن سطح سختی به هر سوال
+                        let difficultyBadge = '';
+                        if (question.difficulty) {
+                            // تبدیل سطح سختی انگلیسی به فارسی
+                            let difficultyText = '';
+                            switch (question.difficulty) {
+                                case 'easy':
+                                    difficultyText = 'ساده';
+                                    difficultyBadge = '<span class="difficulty-badge easy">ساده</span>';
+                                    break;
+                                case 'medium':
+                                    difficultyText = 'متوسط';
+                                    difficultyBadge = '<span class="difficulty-badge medium">متوسط</span>';
+                                    break;
+                                case 'hard':
+                                    difficultyText = 'دشوار';
+                                    difficultyBadge = '<span class="difficulty-badge hard">دشوار</span>';
+                                    break;
+                                default:
+                                    difficultyText = question.difficulty;
+                                    difficultyBadge = `<span class="difficulty-badge">${difficultyText}</span>`;
+                            }
+                        }
+                        
+                        // قرار دادن سطح سختی قبل از شماره سوال
+                        questionText.innerHTML = `${difficultyBadge} ${index + 1}. ${question.text}`;
                         
                         // پاسخ کاربر
                         const userAnswerElement = document.createElement('div');
@@ -2134,5 +2280,227 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // فراخوانی تابع ایجاد دکمه پاک کردن
         createClearQuizButton();
+        
+        // تبدیل آزمون به فایل Word (HTML) و دانلود آن
+        function exportQuizToWord() {
+            if (!currentQuiz || !currentQuiz.questions || currentQuiz.questions.length === 0) {
+                showNotification('آزمونی برای ذخیره‌سازی وجود ندارد.', 'error');
+                return;
+            }
+            
+            const quiz = currentQuiz;
+            
+            // ایجاد محتوای HTML برای فایل Word
+            let htmlContent = `
+            <!DOCTYPE html>
+            <html dir="rtl" lang="fa">
+            <head>
+                <meta charset="UTF-8">
+                <title>${quiz.title || 'آزمون'}</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        line-height: 1.6;
+                        direction: rtl;
+                        text-align: right;
+                        padding: 20px;
+                    }
+                    h1 {
+                        text-align: center;
+                        margin-bottom: 30px;
+                    }
+                    .question {
+                        margin-bottom: 20px;
+                        page-break-inside: avoid;
+                    }
+                    .question-text {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .options {
+                        margin-right: 20px;
+                    }
+                    .option {
+                        margin-bottom: 5px;
+                    }
+                    .option-marker {
+                        font-weight: bold;
+                        margin-left: 5px;
+                        display: inline-block;
+                        width: 25px;
+                    }
+                    .answer-section {
+                        margin-top: 10px;
+                        font-weight: bold;
+                        color: #28a745;
+                    }
+                    .explanation {
+                        margin-top: 5px;
+                        font-weight: normal;
+                        font-style: normal;
+                        color: #333333;
+                        font-size: 14px;
+                        font-family: 'Tahoma', 'Segoe UI', Arial, sans-serif;
+                    }
+                    .difficulty {
+                        margin-right: 10px;
+                        padding: 2px 8px;
+                        border-radius: 10px;
+                        font-size: 0.8em;
+                    }
+                    .difficulty.easy {
+                        background-color: rgba(40, 167, 69, 0.1);
+                        color: #28a745;
+                        border: 1px solid rgba(40, 167, 69, 0.2);
+                    }
+                    .difficulty.medium {
+                        background-color: rgba(255, 193, 7, 0.1);
+                        color: #ffc107;
+                        border: 1px solid rgba(255, 193, 7, 0.2);
+                    }
+                    .difficulty.hard {
+                        background-color: rgba(220, 53, 69, 0.1);
+                        color: #dc3545;
+                        border: 1px solid rgba(220, 53, 69, 0.2);
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>${quiz.title || 'آزمون ایجاد شده'}</h1>
+            `;
+            
+            // اضافه کردن سوالات
+            quiz.questions.forEach((question, index) => {
+                // تعیین کلاس سختی
+                let difficultyClass = '';
+                let difficultyText = '';
+                
+                if (question.difficulty) {
+                    switch(question.difficulty) {
+                        case 'easy':
+                            difficultyClass = 'easy';
+                            difficultyText = 'ساده';
+                            break;
+                        case 'medium':
+                            difficultyClass = 'medium';
+                            difficultyText = 'متوسط';
+                            break;
+                        case 'hard':
+                            difficultyClass = 'hard';
+                            difficultyText = 'دشوار';
+                            break;
+                        default:
+                            difficultyClass = '';
+                            difficultyText = question.difficulty;
+                    }
+                }
+                
+                // اضافه کردن سوال به HTML
+                htmlContent += `
+                <div class="question">
+                    <div class="question-text">
+                        <span>${index + 1}. ${question.text}</span>
+                        ${difficultyText ? `<span class="difficulty ${difficultyClass}">${difficultyText}</span>` : ''}
+                    </div>
+                `;
+                
+                // اضافه کردن گزینه‌ها
+                htmlContent += '<div class="options">';
+                
+                if (question.type === 'multichoice' && question.options && Array.isArray(question.options)) {
+                    // سوالات چندگزینه‌ای
+                    const faLetters = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'];
+                    question.options.forEach((option, optIndex) => {
+                        htmlContent += `<div class="option"><span class="option-marker">${faLetters[optIndex]}. </span>${option}</div>`;
+                    });
+                } else if (question.type === 'truefalse') {
+                    // سوالات صحیح/غلط
+                    htmlContent += `
+                        <div class="option"><span class="option-marker">الف. </span>صحیح</div>
+                        <div class="option"><span class="option-marker">ب. </span>غلط</div>
+                    `;
+                }
+                
+                htmlContent += '</div>';
+                
+                // اضافه کردن پاسخ صحیح
+                htmlContent += `
+                    <div class="answer-section">پاسخ صحیح: ${question.answer}</div>
+                    <div class="explanation">${question.explanation || 'توضیحی ارائه نشده است.'}</div>
+                </div>
+                `;
+            });
+            
+            // بستن تگ‌های HTML
+            htmlContent += `
+            </body>
+            </html>
+            `;
+            
+            // ایجاد فایل بلاب و دانلود آن
+            const blob = new Blob([htmlContent], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${quiz.title || 'آزمون'}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('آزمون با موفقیت به فرمت Word ذخیره شد.', 'success');
+        }
+        
+        // ایجاد دکمه دانلود آزمون به فرمت Word
+        function createExportQuizButton() {
+            // دکمه در پنل آزمون‌دهی
+            let exportButtonTaker = document.getElementById('exportQuizWordTaker');
+            if (!exportButtonTaker && quizTakerPanel) {
+                const actionsContainer = quizTakerPanel.querySelector('.quiz-actions');
+                if (actionsContainer) {
+                    exportButtonTaker = document.createElement('button');
+                    exportButtonTaker.id = 'exportQuizWordTaker';
+                    exportButtonTaker.className = 'quiz-export-button';
+                    exportButtonTaker.textContent = 'ذخیره به فرمت Word';
+                    exportButtonTaker.addEventListener('click', exportQuizToWord);
+                    actionsContainer.appendChild(exportButtonTaker);
+                }
+            }
+            
+            // دکمه در پنل نتایج
+            let exportButtonResults = document.getElementById('exportQuizWordResults');
+            if (!exportButtonResults && quizResultsPanel) {
+                const resultsContainer = document.getElementById('resultsContainer');
+                if (resultsContainer) {
+                    exportButtonResults = document.createElement('button');
+                    exportButtonResults.id = 'exportQuizWordResults';
+                    exportButtonResults.className = 'quiz-export-button';
+                    exportButtonResults.textContent = 'ذخیره به فرمت Word';
+                    exportButtonResults.style.marginTop = '15px';
+                    exportButtonResults.addEventListener('click', exportQuizToWord);
+                    
+                    // قرار دادن دکمه قبل از دکمه ایجاد آزمون جدید
+                    const newQuizButton = document.getElementById('newQuizButton');
+                    if (newQuizButton) {
+                        resultsContainer.insertBefore(exportButtonResults, newQuizButton);
+                    } else {
+                        resultsContainer.appendChild(exportButtonResults);
+                    }
+                }
+            }
+        }
+        
+        // رویداد ایجاد آزمون - اضافه کردن دکمه دانلود
+        const originalRenderQuizQuestions = renderQuizQuestions;
+        renderQuizQuestions = function(quiz) {
+            originalRenderQuizQuestions(quiz);
+            // پس از نمایش سوالات، دکمه دانلود را اضافه کن
+            createExportQuizButton();
+        };
+        
+        // همچنین دکمه دانلود را برای آزمون‌های قبلی اضافه کن
+        if (currentQuiz && currentQuiz.questions && currentQuiz.questions.length > 0) {
+            createExportQuizButton();
+        }
     })();
 }); 
