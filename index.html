@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>سیستم پرسش و پاسخ اسناد (نسخه آنلاین)</title>
     <link rel="stylesheet" href="online-style.css">
+    <!-- PWA متاتگ‌ها و لینک‌ها -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3f51b5">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <!-- پایان PWA متاتگ‌ها -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
@@ -186,5 +193,19 @@
     </div>
     
     <script src="online-script.js"></script>
+    <!-- ثبت سرویس ورکر برای PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('سرویس ورکر با موفقیت ثبت شد:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('خطا در ثبت سرویس ورکر:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html> 
