@@ -547,42 +547,38 @@ h1 {
 }
 
 .modal-overlay {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    align-items: center;
+    background-color: var(--modal-overlay-bg);
+    display: flex;
     justify-content: center;
-    z-index: 9999;
+    align-items: center;
+    z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal-overlay.active {
-    display: flex !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal-dialog {
-    background-color: var(--card-bg);
+    background: var(--card-bg);
     border-radius: 12px;
     width: 90%;
-    max-width: 500px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
-    margin: auto;
+    max-width: 400px;
     overflow: hidden;
-    direction: rtl;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
 }
 
 .modal-overlay.active .modal-dialog {
-    transform: translateY(0) !important;
+    transform: scale(1);
 }
 
 .modal-header {
@@ -592,50 +588,42 @@ h1 {
 
 .modal-title {
     margin: 0;
-    color: var(--text-primary);
+    color: var(--text-color);
     font-size: 18px;
     font-weight: 500;
 }
 
 .modal-body {
     padding: 20px;
-    color: var(--text-primary);
+    color: var(--text-color);
+    line-height: 1.5;
 }
 
 .modal-footer {
     padding: 15px 20px;
-    border-top: 1px solid var(--border-color);
     display: flex;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 10px;
 }
 
 .modal-button {
-    padding: 8px 15px;
-    border-radius: 5px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
     font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
 }
 
 .modal-button.cancel {
-    background-color: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-}
-
-.modal-button.cancel:hover {
-    background-color: rgba(var(--text-secondary-rgb), 0.1);
+    background: transparent;
+    color: var(--text-color);
 }
 
 .modal-button.confirm {
-    background-color: var(--accent-color);
+    background: var(--danger-color);
     color: white;
-    border: none;
-}
-
-.modal-button.confirm:hover {
-    background-color: var(--accent-color-hover);
+    border-color: var(--danger-color);
 }
 
 /* استایل‌های مارک‌داون */
@@ -1880,204 +1868,4 @@ h1 {
     .result-item {
         padding: 10px;
     }
-}
-
-/* افزودن استایل دکمه ذخیره آزمون */
-.quiz-save-button {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.quiz-save-button:hover {
-    background-color: #218838;
-}
-
-/* استایل‌های بخش تاریخچه آزمون‌ها */
-.quiz-history-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px 0;
-}
-
-.quiz-history-container h4 {
-    margin: 0 0 10px 0;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.quiz-history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.quiz-history-empty {
-    color: var(--text-secondary);
-    padding: 20px;
-    text-align: center;
-    background-color: rgba(var(--text-secondary-rgb), 0.05);
-    border-radius: 8px;
-}
-
-.quiz-history-item {
-    background-color: var(--input-bg);
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: relative;
-}
-
-.quiz-history-item-title {
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.quiz-history-item-meta {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
-
-.quiz-history-item-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 5px;
-}
-
-.quiz-history-action-button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 5px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.quiz-history-delete-button {
-    background-color: #dc3545;
-}
-
-.quiz-history-delete-button:hover {
-    background-color: #c82333;
-}
-
-.quiz-history-load-button:hover {
-    background-color: var(--accent-color-hover);
-}
-
-/* استایل مدال ذخیره آزمون */
-.quiz-title-input {
-    width: 100%;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 10px;
-    background-color: var(--input-bg);
-    color: var(--text-primary);
-    font-family: inherit;
-    transition: border-color 0.3s;
-    margin-top: 10px;
-}
-
-.quiz-title-input:focus {
-    border-color: var(--accent-color);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
-}
-
-/* استایل برای منوی کشویی */
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-toggle {
-    position: relative;
-    cursor: pointer;
-}
-
-.dropdown-toggle::after {
-    content: '';
-    display: inline-block;
-    margin-right: 8px;
-    vertical-align: middle;
-    border-top: 5px solid;
-    border-right: 5px solid transparent;
-    border-left: 5px solid transparent;
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 1000;
-    display: none;
-    min-width: 200px;
-    padding: 8px 0;
-    margin: 5px 0 0;
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.dark-theme .dropdown-menu,
-[data-theme="dark"] .dropdown-menu {
-    background-color: #333;
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.dropdown-menu.show {
-    display: block;
-}
-
-.dropdown-item {
-    display: block;
-    width: 100%;
-    padding: 8px 16px;
-    text-align: right;
-    text-decoration: none;
-    color: #333;
-    transition: background-color 0.2s ease;
-}
-
-.dark-theme .dropdown-item,
-[data-theme="dark"] .dropdown-item {
-    color: #eee;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f5f5;
-    text-decoration: none;
-}
-
-.dark-theme .dropdown-item:hover,
-[data-theme="dark"] .dropdown-item:hover {
-    background-color: #444;
-}
-
-/* استایل برای دکمه بازیابی */
-#loadQuizButton {
-    margin-right: 5px;
-}
-
-/* استایل برای وقتی که دکمه‌ها کنار هم قرار می‌گیرند */
-.quiz-actions {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    justify-content: center;
 }
