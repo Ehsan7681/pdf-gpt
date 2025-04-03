@@ -11,6 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         // تنظیم مسیر کتابخانه PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -60,9 +61,9 @@
             
             <div class="upload-section">
                 <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" class="file-input">
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" class="file-input">
                     <label for="fileInput" class="file-label">
-                        <span>انتخاب فایل PDF یا Word</span>
+                        <span>انتخاب فایل PDF، Word یا تصویر</span>
                     </label>
                 </div>
                 <div id="fileName" class="file-name"></div>
@@ -88,6 +89,80 @@
                     <button id="sendButton" class="send-button">ارسال</button>
                 </div>
             </div>
+            
+            <!-- بخش آزمون چندگزینه‌ای -->
+            <div class="quiz-section">
+                <div class="quiz-header">
+                    <h3>ایجاد آزمون از محتوا</h3>
+                    <div class="quiz-tabs">
+                        <button id="showQuizBuilder" class="quiz-tab active">طراحی آزمون</button>
+                        <button id="showQuizTaker" class="quiz-tab">آزمون دهی</button>
+                        <button id="showQuizResults" class="quiz-tab">نتایج</button>
+                    </div>
+                </div>
+                
+                <!-- بخش آزمون -->
+                <div class="quiz-panels">
+                    <!-- بخش طراحی آزمون -->
+                    <div id="quizBuilderPanel" class="quiz-panel active">
+                        <div class="quiz-prompt-container">
+                            <div class="input-label">دستورالعمل ایجاد آزمون</div>
+                            <textarea id="quizPrompt" placeholder="توضیح دهید چه نوع آزمونی می‌خواهید (مثال: ایجاد 5 سوال چهارگزینه‌ای از مباحث اصلی متن)..." class="quiz-prompt"></textarea>
+                            <div class="quiz-options">
+                                <div class="quiz-option">
+                                    <label for="questionCount">تعداد سوالات:</label>
+                                    <input type="number" id="questionCount" min="1" max="20" value="5">
+                                </div>
+                                <div class="quiz-option">
+                                    <label for="quizType">نوع سوالات:</label>
+                                    <select id="quizType">
+                                        <option value="mixed">ترکیبی</option>
+                                        <option value="multichoice">چهارگزینه‌ای</option>
+                                        <option value="truefalse">صحیح/غلط</option>
+                                    </select>
+                                </div>
+                                <div class="quiz-option">
+                                    <label for="quizDifficulty">سطح دشواری:</label>
+                                    <select id="quizDifficulty">
+                                        <option value="mixed">ترکیبی</option>
+                                        <option value="easy">ساده</option>
+                                        <option value="medium">متوسط</option>
+                                        <option value="hard">دشوار</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button id="generateQuiz" class="quiz-generate-button">ایجاد آزمون</button>
+                        </div>
+                    </div>
+                    
+                    <!-- بخش آزمون دهی -->
+                    <div id="quizTakerPanel" class="quiz-panel">
+                        <div id="quizContainer" class="quiz-container">
+                            <div class="quiz-loading" id="quizLoading">
+                                <div class="quiz-loading-text">در حال ایجاد آزمون...</div>
+                                <div class="quiz-loading-spinner"></div>
+                            </div>
+                            <div id="quizQuestions" class="quiz-questions"></div>
+                            <div class="quiz-actions">
+                                <button id="submitQuiz" class="quiz-submit-button">ثبت پاسخ‌ها</button>
+                                <button id="clearQuiz" class="quiz-clear-button">پاک کردن همه</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- بخش نتایج آزمون -->
+                    <div id="quizResultsPanel" class="quiz-panel">
+                        <div id="resultsContainer" class="results-container">
+                            <div class="quiz-score">
+                                <span>نمره شما:</span>
+                                <span id="quizScore" class="quiz-score-value">0/0</span>
+                            </div>
+                            <div id="quizResultDetails" class="quiz-result-details"></div>
+                            <button id="newQuizButton" class="new-quiz-button">ایجاد آزمون جدید</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -103,6 +178,23 @@
             <div class="modal-footer">
                 <button id="cancelClear" class="modal-button cancel">انصراف</button>
                 <button id="confirmClear" class="modal-button confirm">پاک کردن</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- دیالوگ ذخیره آزمون -->
+    <div id="saveQuizDialog" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">ذخیره آزمون</h3>
+            </div>
+            <div class="modal-body">
+                <p>لطفاً عنوانی برای آزمون وارد کنید:</p>
+                <input type="text" id="quizTitleInput" class="quiz-title-input" placeholder="عنوان آزمون (مثال: آزمون فصل 1)">
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSaveQuiz" class="modal-button cancel">انصراف</button>
+                <button id="confirmSaveQuiz" class="modal-button confirm">ذخیره</button>
             </div>
         </div>
     </div>
